@@ -3,9 +3,10 @@ import pygame # im a dramatic guy, i want music.
 from random import randint
 import time
 pygame.mixer.init()
-def playmusic(musicfile):
-    pygame.mixer.music.load(musicfile)
-    pygame.mixer.music.play(loops=0)
+def playmusic(musicfile): # sfx
+    pygame.mixer.Channel(0).play(pygame.mixer.Sound(musicfile))
+def playmusic2(musicfile): # ost
+    pygame.mixer.Channel(1).play(pygame.mixer.Sound(musicfile))
 
 player = {}
 original_map = []
@@ -94,7 +95,6 @@ def initialize_game(game_map, fog, player):
     player['copper'] = 0
     player['silver'] = 0
     player['gold'] = 0
-    player['alexium'] = 0
     player['GP'] = 0
     player['day'] = 1
     player['steps'] = 0
@@ -102,6 +102,7 @@ def initialize_game(game_map, fog, player):
     player['load'] = 0
     player['picklevel'] = 0
     player['totalsteps'] = 0
+    player['health'] = 100
 
     clear_fog(fog, player)
 
@@ -172,6 +173,7 @@ def load_game(game_map, fog, player):
     show_town_menu()
 
 def show_main_menu():
+    playmusic2("introtheme.mp3")
     print()
     print("--- Main Menu ----")
     print("(N)ew game")
@@ -265,6 +267,7 @@ def show_winner(): # Extremely simple show winner code. Horrifically ugly and in
 
 
 def show_town_menu():
+    playmusic2("oddlyoptimistictowntheme.mp3")
     player['steps'] = 0
     if player['GP'] >= WIN_GP:
         win()
@@ -292,6 +295,7 @@ def show_town_menu():
                 draw_map(game_map,fog,player)
             elif choice.upper() == "E":
                 replenish_node(original_map,game_map)
+                playmusic2("miningtheme.mp3")
                 show_mine_menu()
                 break
             elif choice.upper() == "V":
@@ -348,7 +352,7 @@ def show_mine_menu():
         show_town_menu()
     else:
         print('---------------------------------------------------')
-        print(f"{'DAY ' + str(player['day']):^50}") # AHHHHH fuck it, ill deal with the formatting eventually -alex
+        print(f"{'DAY ' + str(player['day']):^50}") 
         print('---------------------------------------------------')
         print(f'DAY {player['day']}')
         draw_view(game_map,player)
@@ -432,11 +436,112 @@ def move(action): # Validation will be done during choice input. Deals with movi
                 print("Your pickaxe is too WEAK!")
                 player['x'] = old_x
                 player['y'] = old_y
+    
+    if game_map[player['y']][player['x']]  == "Q":
+        choice = input("... You see an entrance to a dark cavern...enter? (Y/N) ")
+        if choice.upper() == "Y":
+            print("... you jump into the dark cavern.")
+            bossFight()
+        else:
+            print("...you decide to leave it alone.")
+            player['x'] = old_x
+            player['y'] = old_y
 
     clear_fog(fog,player) # Clears the fog around the player
     player['steps'] += 1
     player['totalsteps'] += 1
     show_mine_menu()
+
+
+
+# extra bonus alex content: a boss fight!!!! the Q node gives a warning. If the player chooses to proceed, they will encounter the Roaring Knight.
+
+RoaringKnight = {}
+RoaringKnight['health'] = 2000
+RoaringKnight['damage'] = (5,10)
+def playerFight():
+    playmusic("slash.mp3")
+    damage = randint(50,200)
+    RoaringKnight["health"] -= damage
+    print(f"You dealt {damage} damage!")
+    if damage >= 150:
+        print("It's a crit!")
+
+def knightAttack():
+    damage = randint(RoaringKnight["damage"][0],RoaringKnight["damage"][1])
+    dodge = randint(1,10)
+    if dodge != 1:
+        print(f"The roaring knight deals {damage} damage.")
+        player['health'] -= damage
+    else:
+        print("... you somehow dodged his attack!")
+
+
+
+def playerItem():
+    print("You held on to your hopes and dreams...")
+    time.sleep(2)
+    playmusic("heal.mp3")
+    chance = randint(1,4)
+    if chance == 1:
+        print("...You regained 10 health!")
+        player["health"] += 10
+    elif chance == 2:
+        print("Your determination surged! You regained 15 health!")
+        player["health"] += 15
+    else:
+        print("...you barely regained 5 health.")
+        player["health"] += 5
+
+
+def bossFight():
+    playmusic2('crickets.mp3')
+    print(
+    '''-------------------------------------------------------------
+                            A Cold Place
+       -------------------------------------------------------------'''
+    )
+    time.sleep(1)
+    print("You have entered a location where you shouldn't have.")
+    time.sleep(2)
+    print("...")
+    time.sleep(2)
+    print("Something lurks here.")
+    time.sleep(2)
+    print(f"{player['name']}: ...?")
+    time.sleep(2)
+    print("... the roaring knight from deltarune appeared????")
+    time.sleep(2)
+    print("... here we go!")
+    playmusic2("BlackKnife.mp3")
+    time.sleep(2)
+    print("The Roaring Knight appears.")
+    while True:
+        if player["health"] <= 0:
+            print("... the Knight strikes you down. Your journey... is at an end.")
+            break
+        print(f'''Player Health: {player['health']} 
+                  Knight Health: {RoaringKnight['health']}''')
+        print("(A)ttack        (I)tem      (R)un")
+        choice = input('What will you do? ')
+        if choice.upper() == "A":
+            playerFight()
+        elif choice.upper() == "I":
+            playerItem()
+        elif choice.upper() == "R":
+            print('You tried to run... but your legs are stuck in fear!')
+        else:
+            print("You hesitate, your fear overwhelming your decisions...")
+        if RoaringKnight["health"] <= 0:
+            print("The knight stumbles... he drops a Shadow Crystal. You win! You earned 200 GP!")
+            player['GP'] += 200
+            break
+        time.sleep(2)
+        knightAttack()
+
+
+
+
 
 #--------------------------- MAIN GAME ---------------------------
 game_state = 'main'
