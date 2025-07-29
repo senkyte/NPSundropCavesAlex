@@ -10,9 +10,13 @@ def playmusic2(musicfile): # ost
 
 player = {}
 original_map = []
+global encounteredRuin
+global bossBeat
 game_map = []
 fog = []
 winner_list = []
+encounteredRuin = False
+bossBeat = False
 
 MAP_WIDTH = 0
 MAP_HEIGHT = 0
@@ -41,8 +45,8 @@ pieces['gold'] = (1,2)
 def load_map(filename, map_struct): # 'For all future references, just treat map_struct as game_map' -alex
     try:  # Validation check of filename.
         map_file = open(filename, 'r')
-        lines = map_file.readlines()
-        if "T" not in [i for i in lines]: # Ensures town location is in map
+        map_list = map_file.readlines()
+        if not any("T" in line for line in map_list): # Ensures town location is in map
             raise ValueError(f"Your town location (T) is not found on {filename} ! Invalid level map!")
     except FileNotFoundError: 
         print(f"Something went wrong! We can't find {filename}!")
@@ -51,7 +55,6 @@ def load_map(filename, map_struct): # 'For all future references, just treat map
         global MAP_HEIGHT      
         map_struct.clear()
         
-        map_list = map_file.readlines()
         for i in range(len(map_list)):
             map_struct.append(list(map_list[i].strip("\n")))
         
@@ -105,6 +108,7 @@ def initialize_game(game_map, fog, player):
     player['picklevel'] = 0
     player['totalsteps'] = 0
     player['health'] = 100
+    player['damage'] = (50,200)
 
     clear_fog(fog, player)
 
@@ -313,8 +317,12 @@ def show_town_menu():
 def show_shop_menu(MAX_LOAD):
     print(
         f'''----------------------- Shop Menu -------------------------
+
+Blacksmith: "Ah, welcome adventurer!"
+                
 (P)ickaxe upgrade to Level {player['picklevel'] + 1} to mine {prices["pickaxe"][player['picklevel']][1]} ore for {prices["pickaxe"][player['picklevel']][0]} GP
 (B)ackpack upgrade to carry {MAX_LOAD + 2} items for {MAX_LOAD * 2} GP
+(C)hat
 (L)eave shop
 -----------------------------------------------------------
 GP: {player["GP"]}
@@ -338,6 +346,42 @@ GP: {player["GP"]}
                 break
             else:
                 print("You don't have enough GP!")
+        elif choice.upper() == "C": # just some fun lore dialogue -alex
+            print("Blacksmith: 'Well! What would you like to talk about?'")
+            print("(1) About the town")
+            print("(2) About the blacksmith")
+            print("(3) The creator")
+            print("(L)eave")
+            if encounteredRuin == True:
+                print("(?) The ruin?")
+            choice = input("Talk? ")
+            if choice == "1":
+                print("Blacksmith: Ah, a nice peaceful town with a oddly abundant mine that somehow magically replenishes! I hope you enjoy your stay.")
+            elif choice == "2":
+                print("Blacksmith: Me? Nothing to talk about. I've spent my life helping people like you create stronger pickaxes to help you mine better ores. It's a shame... I was trained to forge weapons in the past...")
+            elif choice == "3":
+                print("Blacksmith: Ah, you speak of the town's religion. Legend has it that this entire town is nothing but a simulation, created by a god. Once the god has had its fun, we shall all cease to be. How nihilistic!")
+            elif choice == "?" and encounteredRuin == True:
+                print("Blacksmith: ...so you've encountered the Ruin. It is best you stay far away from that ruin, lest it consume you like it has to other adventurers.")
+                time.sleep(2)
+                print("Blacksmith: ...Adventurer. Are you willing to venture into the depths? (Y/N)")
+                choice2 = input("Your decision. ")
+                if choice2 == "Y":
+                    print("Blacksmith: Very well. I have an odd feeling about you... Perhaps you will be the one to defeat him.")
+                    print("Blacksmith: I will provide you with a weapon... the 10Mark blade. My greatest creation. I will sell it to you for 200 GP.")
+                    buyBlade = input("Would you like to buy the 10Mark?(Y/N) ")
+                    if buyBlade.upper() == "Y" and player["GP"] >= 200:
+                        print("You equiped the 10Mark. It increases your damage!")
+                        player["damage"] = (100,300)
+                        player['GP'] -= 200
+                    elif buyBlade.upper() == "Y" and player["GP"] < 200:
+                        print("Blacksmith: Hm? You're broke! Go fetch more GP if you really want this weapon!")
+                    else:
+                        print("Blacksmith: Hesitating? Talk to me again once you have made your mind.")
+                else:
+                    print("Best not to dig into it then...")
+            else:
+                print("Blacksmith: Speak up, adventurer! You're wasting my time!")
         elif choice.upper() == "L":
             break
         else:
@@ -402,6 +446,8 @@ def replenish_node(original_map,game_map): # 10 mark! 10 mark! 10 mark!
                     game_map[y][x] = original_map[y][x] # replenishes node
 
 def move(action): # Validation will be done during choice input. Deals with moving, and also deals with the ores.
+    global encounteredRuin
+    global bossBeat
     old_x = player['x']
     old_y = player['y']
     if action == 'W': # Dealing with the movement.
@@ -440,12 +486,17 @@ def move(action): # Validation will be done during choice input. Deals with movi
                 player['y'] = old_y
     
     if game_map[player['y']][player['x']]  == "Q":
-        choice = input("... You see an entrance to a dark cavern...enter? (Y/N) ")
-        if choice.upper() == "Y":
+        choice = input("... You see an entrance to a dark cavern...enter? (THIS IS A SIDE QUEST. YOU WILL RETURN BACK TO THE TOWN IF VICTORIOUS.)(Y/N) ")
+        if choice.upper() == "Y" and bossBeat == False:
             print("... you jump into the dark cavern.")
             bossFight()
+        elif choice.upper() == 'Y' and bossBeat == True:
+            print("...there's no point in coming back. The knight is slain.")
+            player['x'] = old_x
+            player['y'] = old_y
         else:
             print("...you decide to leave it alone.")
+            encounteredRuin = True
             player['x'] = old_x
             player['y'] = old_y
 
@@ -463,7 +514,7 @@ RoaringKnight['health'] = 2000
 RoaringKnight['damage'] = (5,10)
 def playerFight():
     playmusic("slash.mp3")
-    damage = randint(50,200)
+    damage = randint(player['damage'][0],player['damage'][1])
     RoaringKnight["health"] -= damage
     print(f"You dealt {damage} damage!")
     if damage >= 150:
@@ -535,13 +586,13 @@ def bossFight():
         else:
             print("You hesitate, your fear overwhelming your decisions...")
         if RoaringKnight["health"] <= 0:
-            print("The knight stumbles... he drops a Shadow Crystal. You win! You earned 200 GP!")
-            player['GP'] += 200
+            print("The knight stumbles... he drops a Shadow Crystal. You win! You earned 2000 GP!")
+            player['GP'] += 2000
+            bossBeat = True
             break
         time.sleep(2)
         knightAttack()
-
-
+    show_town_menu()
 
 
 
