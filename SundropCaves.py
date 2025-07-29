@@ -41,12 +41,14 @@ pieces['gold'] = (1,2)
 def load_map(filename, map_struct): # 'For all future references, just treat map_struct as game_map' -alex
     try:  # Validation check of filename.
         map_file = open(filename, 'r')
+        lines = map_file.readlines()
+        if "T" not in [i for i in lines]: # Ensures town location is in map
+            raise ValueError(f"Your town location (T) is not found on {filename} ! Invalid level map!")
     except FileNotFoundError: 
         print(f"Something went wrong! We can't find {filename}!")
     else:
         global MAP_WIDTH
-        global MAP_HEIGHT
-        
+        global MAP_HEIGHT      
         map_struct.clear()
         
         map_list = map_file.readlines()
