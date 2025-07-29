@@ -70,12 +70,13 @@ def load_map(filename, map_struct): # 'For all future references, just treat map
 
 
 
-# This function clears the fog of war at the 3x3 square around the player
-def clear_fog(fog, player): 
-    # Locates the player within the existing fog
+# This function clears the fog of war at a designated size x size square around the player
+def clear_fog(fog, player,size): # Limitation: size MUST be an odd number. I will add an assert that is only meant for potential developers who want to modify my work and not the player -alex 
+    assert size % 2 != 0
     player_x = player['x']
     player_y = player['y']
-    for y in range(player_y - 1, player_y + 2): # Iterates through every coordinate.
+    sizediff = (size - 1)/2 # The range to check, left and right.
+    for y in range(player_y - sizediff, player_y + sizediff + 1): # Iterates through every coordinate.
         for x in range(player_x - 1, player_x + 2): 
             if 0 <= x < MAP_WIDTH and 0 <= y < MAP_HEIGHT: # Checks if the x pr y coordinate is within 1 of the player
                     fog[y][x] = " "
@@ -109,8 +110,9 @@ def initialize_game(game_map, fog, player):
     player['totalsteps'] = 0
     player['health'] = 100
     player['damage'] = (50,200)
+    player['fogclear'] = 3
 
-    clear_fog(fog, player)
+    clear_fog(fog, player,player['fogclear'])
 
 # This function draws the entire map, covered by the fog
 def draw_map(game_map, fog, player):
@@ -322,6 +324,7 @@ Blacksmith: "Ah, welcome adventurer!"
                 
 (P)ickaxe upgrade to Level {player['picklevel'] + 1} to mine {prices["pickaxe"][player['picklevel']][1]} ore for {prices["pickaxe"][player['picklevel']][0]} GP
 (B)ackpack upgrade to carry {MAX_LOAD + 2} items for {MAX_LOAD * 2} GP
+(T)orch that that increases the size of the viewport to 5x5 for 50 GP
 (C)hat
 (L)eave shop
 -----------------------------------------------------------
@@ -346,6 +349,13 @@ GP: {player["GP"]}
                 break
             else:
                 print("You don't have enough GP!")
+        elif choice.upper() == "T": # 10 mark! 10 mark! 10 maark!
+            if player['GP'] >= 50:
+                print("Congrats! You now own a magic torch that that increases the size of the viewport to 5x5!")
+                player["fogclear"] = 5
+                player['GP'] -= 50
+            else:
+                print("You don't have enough money!")
         elif choice.upper() == "C": # just some fun lore dialogue -alex
             print("Blacksmith: 'Well! What would you like to talk about?'")
             print("(1) About the town")
@@ -500,7 +510,7 @@ def move(action): # Validation will be done during choice input. Deals with movi
             player['x'] = old_x
             player['y'] = old_y
 
-    clear_fog(fog,player) # Clears the fog around the player
+    clear_fog(fog,player,player['fogclear']) # Clears the fog around the player
     player['steps'] += 1
     player['totalsteps'] += 1
     show_mine_menu()
