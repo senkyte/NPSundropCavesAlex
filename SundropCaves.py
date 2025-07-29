@@ -588,6 +588,7 @@ def bossFight():
         if RoaringKnight["health"] <= 0:
             print("The knight stumbles... he drops a Shadow Crystal. You win! You earned 2000 GP!")
             player['GP'] += 2000
+            global bossBeat
             bossBeat = True
             break
         time.sleep(2)
